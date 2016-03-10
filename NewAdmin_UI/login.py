@@ -1,4 +1,5 @@
 # -*- coding: utf8 -*-
+import unittest
 import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -12,16 +13,25 @@ from test import test
 class login (test):
     __count = 0
 
-    def __init__(self):
-        test.__init__(self)
+    def setUp(self):
+        test.setUp(self)
         self.collection = self.db.get_collection("Login")
 
-    def __del__(self):
+    def tearDown(self):
         self.driver.close()
+
+
+    def loginTest(self):
+        self.test_redirect_to_login()
+        self.test_normal_login()
+        self.test_invaild_information()
+        self.test_blank_login()
+        print "Test cases executed num: " + str(self.get_test_case_num())
+        del self
 
     def component_test_step(self,data):
         driver = self.driver
-        driver.get("http://gene.rnet.missouri.edu/iKnow/Admin/1210/login.php")
+        driver.get("http://gene.rnet.missouri.edu/iKnow/Admin/login.php")
         assert "欢迎登录后台管理系统" in driver.title
         elem = driver.find_element_by_id("username")
         elem.send_keys(data["userName"])
@@ -32,7 +42,7 @@ class login (test):
 
     def test_normal_login(self):
         datas = self.collection.find({"status":True})
-        print "Testing Normal login function with vaild information:"
+        print "Testing Normal login function with vaild information..."
         for data in datas:
             driver = self.component_test_step(data)
             try:
@@ -47,8 +57,8 @@ class login (test):
         print "Normal login function Testing Done.\n\n"
 
     def test_blank_login(self):
-        datas = self.collection.find({"status":False,"type":"blank"})
-        print "Testing login function with blank information:"
+        datas = self.collection.find({"status":False,"testCaseNo":"1.4"})
+        print "Testing login function with blank information..."
         for data in datas:
             driver = self.component_test_step(data)
             alert_txt = self.invaild_information_get_alert(driver)
@@ -67,6 +77,7 @@ class login (test):
                     print "Failed information: '请完整填写用户名和密码' not in alert txt"
                     print "         username: "+data["userName"]
                     print "         password: "+data["password"]
+                    print "         alert txt: "+alert_txt
                     print "\n"
 
 
@@ -91,8 +102,8 @@ class login (test):
 
 
     def test_invaild_information(self):
-        datas = self.collection.find({"status":False,"type":"invaild"})
-        print "Testing Login function with invaild information: "
+        datas = self.collection.find({"status":False,"testCaseNo":"1.3"})
+        print "Testing Login function with invaild information... "
         for data in datas:
             driver = self.component_test_step(data)
             alert_txt = self.invaild_information_get_alert(driver)
@@ -111,15 +122,50 @@ class login (test):
                     print "Failed information: '用户名或密码错误' was not in alert text"
                     print "         username: "+data["userName"]
                     print "         password: "+data["password"]
+                    print "         alert txt: "+alert_txt
                     print "\n"
 
             self.__count+=1
 
         print "Invaild information Login test is done.\n\n"
 
+    def test_redirect_to_login(self):
+        datas = self.collection.find({"testCaseNo":"1.2"})
+        print "Testing redirect to login page... "
+        for data in datas:
+          self.driver.get(data['url'])
+
+          try:
+              alert = self.driver.switch_to_alert()
+          except:
+              print "Redirect to login page FAILED."
+              print "URL: "+ data['url']
+              print "No alert information poped!."
+
+          alert_txt = alert.text
+          try:
+              assert "请登录" in alert_txt
+          except:
+              print "Redirect to login page FAILED."
+              print "URL: "+ data['url']
+              print "Alert didn't present right information. alert txt :" + alert_txt
+              continue
+
+          alert.accept()
+          try:
+            assert "欢迎进入iKnow管理系统" not in self.driver.title
+          except:
+            print "Redirect to login page FAILED."
+            print "URL: "+ data['url']
+            print "Get in main page!"
+            continue
+          self.__count+=1
+        print "Redirect Testing Done. \n"
 
     def get_test_case_num(self):
         return self.__count;
+
+
     # def test_invaild_login(self):
     #     datas = self.collection.find({"status":False,"type":"invaild"})
     #     print "Testing Login function with invaild information: "
@@ -152,9 +198,8 @@ class login (test):
     #     print "Invaild information Login test is done."
 
 
-login1 = login()
-login1.test_normal_login()
-login1.test_invaild_information()
-login1.test_blank_login()
-print "Test cases executed num: "+ login1.get_test_case_num()
-del login1
+#login1 = login()
+#login1.loginTest();
+
+if __name__ == "__main__":
+    unittest.main()
